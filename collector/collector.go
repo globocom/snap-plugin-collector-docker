@@ -46,8 +46,8 @@ const (
 	// version of plugin
 	PLUGIN_VERSION = 8
 
-	// each metric starts with prefix "/intel/docker/<docker_id>"
-	lengthOfNsPrefix = 3
+	// each metric starts with prefix "/intel/docker/<k8s_namespace>/<k8s_pod>/<k8s_container>"
+	lengthOfNsPrefix = 5
 )
 
 var getters map[string]container.StatGetter = map[string]container.StatGetter{
@@ -163,7 +163,18 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 		for rid := range ridGroup {
 			ns := make([]plugin.NamespaceElement, len(mt.Namespace))
 			copy(ns, mt.Namespace)
-			ns[2].Value = rid
+
+			namespace := c.containers[rid].Specification.Labels["io.kubernetes.pod.namespace"]
+			pod := c.containers[rid].Specification.Labels["io.kubernetes.pod.name"]
+			containerName := c.containers[rid].Specification.Labels["io.kubernetes.container.name"]
+
+			ns[2].Value = getK8sLabelOrDefault(namespace)
+			ns[3].Value = getK8sLabelOrDefault(pod)
+			if len(containerName) > 0 {
+				ns[4].Value = containerName + "_" + rid
+			} else {
+				ns[4].Value = rid
+			}
 
 			// omit "spec" metrics for root
 			if rid == "root" && mt.Namespace[lengthOfNsPrefix].Value == "spec" {
@@ -670,14 +681,18 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 
 	// add labels as tags to metrics
 	for i := range metrics {
-		rid := metrics[i].Namespace[2].Value
+		rid := metrics[i].Namespace[4].Value
+		shortID, err := container.GetShortID(rid)
+		if err != nil {
+			return nil, err
+		}
 		// adding labels - only for docker's container, skip the host
-		if rid != "root" {
+		if shortID != "root" {
 			if len(metrics[i].Tags) == 0 {
-				metrics[i].Tags = c.containers[rid].Specification.Labels
+				metrics[i].Tags = c.containers[shortID].Specification.Labels
 			} else {
 				// adding labels one by one to existing tags
-				for lkey, lval := range c.containers[rid].Specification.Labels {
+				for lkey, lval := range c.containers[shortID].Specification.Labels {
 					metrics[i].Tags[lkey] = lval
 				}
 			}
@@ -685,6 +700,21 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 	}
 
 	return metrics, nil
+}
+
+func getK8sLabelOrDefault(label string) string {
+	if len(label) > 0 {
+		return strings.Map(dotToUnderscore, label)
+	}
+
+	return "none"
+}
+
+func dotToUnderscore(r rune) rune {
+	if r == '.' {
+		return '_'
+	}
+	return r
 }
 
 // GetMetricTypes returns list of available metrics
@@ -702,7 +732,9 @@ func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	nscreator := nsCreator{dynamicElements: definedDynamicElements}
 	for _, metricName := range dockerMetrics {
 		ns := plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container")
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name")
 
 		if ns, err = nscreator.createMetricNamespace(ns, metricName); err != nil {
 			// skip this metric name which is not supported
@@ -758,9 +790,9 @@ func (c *collector) getRidGroup(mt ...plugin.Metric) (map[string]map[string]stru
 			return nil, fmt.Errorf("Invalid name of metric %+s", strings.Join(ns, "/"))
 		}
 
-		rid := ns[2]
+		rid := ns[4]
 
-		group, err := getQueryGroup(ns[3:])
+		group, err := getQueryGroup(ns[5:])
 		if err != nil {
 			return nil, err
 		}
