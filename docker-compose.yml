@@ -1,0 +1,21 @@
+version: '2'
+services:
+  base:
+    image: golang:1.8
+    volumes:
+      - .:/go/src/github.com/intelsdi-x/snap-plugin-collector-docker
+    working_dir: /go/src/github.com/intelsdi-x/snap-plugin-collector-docker
+
+  test:
+    extends:
+      service: base
+    command: make test-all
+    volumes:
+      - .:/go/src/github.com/intelsdi-x/snap-plugin-collector-docker
+
+  build:
+    extends:
+      service: base
+    command: make
+    volumes:
+      - .:/go/src/github.com/intelsdi-x/snap-plugin-collector-docker
