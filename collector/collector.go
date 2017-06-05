@@ -46,8 +46,8 @@ const (
 	// version of plugin
 	PLUGIN_VERSION = 8
 
-	// each metric starts with prefix "/intel/docker/<docker_id>"
-	lengthOfNsPrefix = 3
+	// each metric starts with prefix "/intel/docker/<k8s_namespace>/<k8s_pod>/<k8s_container>"
+	lengthOfNsPrefix = 5
 )
 
 var getters map[string]container.StatGetter = map[string]container.StatGetter{
@@ -163,7 +163,16 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 		for rid := range ridGroup {
 			ns := make([]plugin.NamespaceElement, len(mt.Namespace))
 			copy(ns, mt.Namespace)
-			ns[2].Value = rid
+			pod := c.containers[rid].Specification.Labels["io.kubernetes.pod.name"]
+			namespace := c.containers[rid].Specification.Labels["io.kubernetes.pod.namespace"]
+			containerName := c.containers[rid].Specification.Labels["io.kubernetes.container.name"]
+			ns[2].Value = getK8sLabelOrDefault(namespace)
+			ns[3].Value = getK8sLabelOrDefault(pod)
+			if len(containerName) > 0 {
+				ns[4].Value = containerName
+			} else {
+				ns[4].Value = rid
+			}
 
 			// omit "spec" metrics for root
 			if rid == "root" && mt.Namespace[lengthOfNsPrefix].Value == "spec" {
@@ -687,6 +696,15 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 	return metrics, nil
 }
 
+func getK8sLabelOrDefault(label string) string {
+	if len(label) > 0 {
+		return label
+	}
+
+	return "none"
+}
+
+
 // GetMetricTypes returns list of available metrics
 func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	var err error
@@ -702,7 +720,9 @@ func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	nscreator := nsCreator{dynamicElements: definedDynamicElements}
 	for _, metricName := range dockerMetrics {
 		ns := plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container")
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name")
 
 		if ns, err = nscreator.createMetricNamespace(ns, metricName); err != nil {
 			// skip this metric name which is not supported
