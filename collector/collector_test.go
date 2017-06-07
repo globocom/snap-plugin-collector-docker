@@ -38,6 +38,9 @@ import (
 )
 
 var mockDockerID = "a26c852ce22c"
+var mockPod = "some_pod"
+var mockNamespace = "some_namespace"
+var mockContainerName = "some_container_name"
 var mockDockerHost = "root"
 
 var mockListOfContainers = map[string]*container.ContainerData{
@@ -69,20 +72,26 @@ var mockMts = []plugin.Metric{
 	// representation of metrics grouped as `spec`
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("spec", "creation_time"),
 		Config: metricConf,
 	},
 	// representation of metrics grouped as `cgroup/cpu_stats`
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "cgroups", "cpu_stats", "cpu_usage", "total_usage"),
 		Config: metricConf,
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "cgroups", "cpu_stats", "cpu_usage", "percpu").
 			AddDynamicElement("cpu_id", "an id of cpu").
 			AddStaticElement("value"),
@@ -92,19 +101,25 @@ var mockMts = []plugin.Metric{
 	// representation of metrics grouped as `cgroups/memory_stats`
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "cgroups", "memory_stats", "cache"),
 		Config: metricConf,
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "cgroups", "memory_stats", "statistics", "pgpgin"),
 		Config: metricConf,
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "cgroups", "memory_stats", "usage", "max_usage"),
 		Config: metricConf,
 	},
@@ -112,13 +127,17 @@ var mockMts = []plugin.Metric{
 	// representation of metrics grouped as `connection`
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "connection", "tcp", "established"),
 		Config: metricConf,
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "connection", "tcp6", "established"),
 		Config: metricConf,
 	},
@@ -126,7 +145,9 @@ var mockMts = []plugin.Metric{
 	// representation of metrics grouped as `network`
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "network").
 			AddDynamicElement("network_interface", "a name of network interface or 'total' for aggregate").
 			AddStaticElement("rx_bytes"),
@@ -134,7 +155,9 @@ var mockMts = []plugin.Metric{
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("stats", "network").
 			AddDynamicElement("network_interface", "a name of network interface or 'total' for aggregate").
 			AddStaticElement("tx_bytes"),
@@ -142,7 +165,9 @@ var mockMts = []plugin.Metric{
 	},
 	plugin.Metric{
 		Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container").
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name").
 			AddStaticElements("spec", "labels").
 			AddDynamicElement("label_key", "a key of container's label").
 			AddStaticElement("value"),
@@ -266,18 +291,22 @@ func TestCollectMetrics(t *testing.T) {
 		getters = MockGetters
 		dockerPlg.client = mc
 
-		Convey("for specific dynamic elements: docker_id", func() {
+		Convey("for specific dynamic elements: pod/namespace/container", func() {
 			mockMt := plugin.Metric{
 				Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-					AddDynamicElement("docker_id", "an id of docker container").
+					AddDynamicElement("namespace", "kubernetes namespace").
+					AddDynamicElement("pod", "pod name").
+					AddDynamicElement("container", "docker container name").
 					AddStaticElements("stats", "cgroups", "memory_stats", "cache"),
 				Config: metricConf,
 			}
 
 			Convey("succefull when specified container exists", func() {
 				Convey("for short docker_id", func() {
-					// specify docker id of requested metric type as a short
-					mockMt.Namespace[2].Value = mockDockerID
+					// specify namespace of requested metric type as a short
+					mockMt.Namespace[2].Value = mockPod
+					mockMt.Namespace[3].Value = mockNamespace
+					mockMt.Namespace[4].Value = mockContainerName
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
@@ -287,27 +316,30 @@ func TestCollectMetrics(t *testing.T) {
 
 					testLabels(metrics)
 				})
-				Convey("for long docker_id", func() {
-					// specify docker id of requested metric type as a long
-					mockMt.Namespace[2].Value = mockListOfContainers[mockDockerID].ID
+				Convey("with labels", func() {
+					// specify namespace of requested metric type as a short
+					mockMt.Namespace[2].Value = mockPod
+					mockMt.Namespace[3].Value = mockNamespace
+					mockMt.Namespace[4].Value = mockContainerName
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockDockerID+"/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockPod+"/"+mockNamespace+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
 
 					testLabels(metrics)
 				})
 				Convey("for host of docker_id", func() {
-					// specify docker id of requested metric type
-					mockMt.Namespace[2].Value = "root"
+					mockMt.Namespace[2].Value = "none"
+					mockMt.Namespace[3].Value = "none"
+					mockMt.Namespace[4].Value = mockDockerID
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/root/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/none/none/"+mockDockerID+"/stats/cgroups/memory_stats/cache")
 
 					Convey("labels are empty", func() {
 						So(metrics[0].Tags, ShouldBeEmpty)
@@ -327,7 +359,9 @@ func TestCollectMetrics(t *testing.T) {
 				Convey("when specified docker_id has invalid format", func() {
 					mockMt := plugin.Metric{
 						Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-							AddDynamicElement("docker_id", "an id of docker container").
+							AddDynamicElement("namespace", "kubernetes namespace").
+							AddDynamicElement("pod", "pod name").
+							AddDynamicElement("container", "docker container name").
 							AddStaticElements("stats", "cgroups", "memory_stats", "cache"),
 						Config: metricConf,
 					}
@@ -342,20 +376,24 @@ func TestCollectMetrics(t *testing.T) {
 			})
 		})
 
-		Convey("for specific dynamic elements: docker_id and cpu_id", func() {
+		Convey("for specific dynamic elements: pod/namespace/container and cpu_id", func() {
 			mockMt := plugin.Metric{
 				Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-					AddDynamicElement("docker_id", "an id of docker container").
+					AddDynamicElement("namespace", "kubernetes namespace").
+					AddDynamicElement("pod", "pod name").
+					AddDynamicElement("container", "docker container name").
 					AddStaticElements("stats", "cgroups", "cpu_stats", "cpu_usage", "per_cpu").
 					AddDynamicElement("cpu_id", "an id of cpu").
 					AddStaticElement("value"),
 				Config: metricConf,
 			}
-			// specify docker_id and cpu_id of requested metric type
-			mockMt.Namespace[2].Value = mockDockerID
+			// specify pod/namespace/container and cpu_id of requested metric type
+			mockMt.Namespace[2].Value = mockPod
+			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified cpu_id is valid", func() {
-				mockMt.Namespace[8].Value = "0"
+				mockMt.Namespace[10].Value = "0"
 
 				metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 				So(err, ShouldBeNil)
@@ -369,21 +407,21 @@ func TestCollectMetrics(t *testing.T) {
 			Convey("return an error when specified cpu_id is invalid", func() {
 				Convey("when cpu_id is out of range", func() {
 					// specify cpu_id which does not exist (out of range)
-					mockMt.Namespace[8].Value = "100"
+					mockMt.Namespace[10].Value = "100"
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldNotBeNil)
 					So(metrics, ShouldBeEmpty)
 				})
 				Convey("when cpu_id is negative", func() {
-					mockMt.Namespace[8].Value = "-1"
+					mockMt.Namespace[10].Value = "-1"
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldNotBeNil)
 					So(metrics, ShouldBeEmpty)
 				})
 				Convey("when cpu_id is a float", func() {
-					mockMt.Namespace[8].Value = "1.0"
+					mockMt.Namespace[10].Value = "1.0"
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldNotBeNil)
@@ -392,20 +430,24 @@ func TestCollectMetrics(t *testing.T) {
 			})
 		})
 
-		Convey("for specific dynamic elements: docker_id and network_interface", func() {
+		Convey("for specific dynamic elements: pod/namespace/container and network_interface", func() {
 			mockMt := plugin.Metric{
 				Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-					AddDynamicElement("docker_id", "an id of docker container").
+					AddDynamicElement("namespace", "kubernetes namespace").
+					AddDynamicElement("pod", "pod name").
+					AddDynamicElement("container", "docker container name").
 					AddStaticElements("stats", "network").
 					AddDynamicElement("network_interface", "a name of network interface or 'total' for aggregate").
 					AddStaticElement("rx_bytes"),
 				Config: metricConf,
 			}
-			// specify docker_id and device_name of requested metric type
-			mockMt.Namespace[2].Value = mockDockerID
+			// specify pod/namespace/container and network_interface of requested metric type
+			mockMt.Namespace[2].Value = mockPod
+			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified network interface exists", func() {
-				mockMt.Namespace[5].Value = "eth0"
+				mockMt.Namespace[7].Value = "eth0"
 
 				metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 				So(err, ShouldBeNil)
@@ -423,20 +465,24 @@ func TestCollectMetrics(t *testing.T) {
 			})
 		})
 
-		Convey("for specific dynamic elements: docker_id and label_key", func() {
+		Convey("for specific dynamic elements: pod/namespace/container and label_key", func() {
 			mockMt := plugin.Metric{
 				Namespace: plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-					AddDynamicElement("docker_id", "an id of docker container").
+					AddDynamicElement("namespace", "kubernetes namespace").
+					AddDynamicElement("pod", "pod name").
+					AddDynamicElement("container", "docker container name").
 					AddStaticElements("spec", "labels").
 					AddDynamicElement("label_key", "a key of container's label").
 					AddStaticElement("value"),
 				Config: metricConf,
 			}
-			// specify docker_id and device_name of requested metric type
-			mockMt.Namespace[2].Value = mockDockerID
+			// specify pod/namespace/container and label_key of requested metric type
+			mockMt.Namespace[2].Value = mockPod
+			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified label exists", func() {
-				mockMt.Namespace[5].Value = "lkey1"
+				mockMt.Namespace[7].Value = "lkey1"
 
 				metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 				So(err, ShouldBeNil)
@@ -447,7 +493,7 @@ func TestCollectMetrics(t *testing.T) {
 				testLabels(metrics)
 			})
 			Convey("return an error when specified label is invalid (not exist)", func() {
-				mockMt.Namespace[5].Value = "lkey1_invalid"
+				mockMt.Namespace[7].Value = "lkey1_invalid"
 
 				metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 				So(err, ShouldNotBeNil)

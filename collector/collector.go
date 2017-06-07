@@ -704,7 +704,6 @@ func getK8sLabelOrDefault(label string) string {
 	return "none"
 }
 
-
 // GetMetricTypes returns list of available metrics
 func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	var err error
@@ -778,9 +777,9 @@ func (c *collector) getRidGroup(mt ...plugin.Metric) (map[string]map[string]stru
 			return nil, fmt.Errorf("Invalid name of metric %+s", strings.Join(ns, "/"))
 		}
 
-		rid := ns[2]
+		rid := ns[4]
 
-		group, err := getQueryGroup(ns[3:])
+		group, err := getQueryGroup(ns[5:])
 		if err != nil {
 			return nil, err
 		}
@@ -793,16 +792,7 @@ func (c *collector) getRidGroup(mt ...plugin.Metric) (map[string]map[string]stru
 		case "root":
 			appendIfMissing(ridGroup, "root", group)
 		default:
-			shortID, err := container.GetShortID(rid)
-			if err != nil {
-				return nil, err
-			}
-
-			if _, exist := c.containers[shortID]; !exist {
-				return nil, fmt.Errorf("Docker container %+s cannot be found", rid)
-			}
-
-			appendIfMissing(ridGroup, shortID, group)
+			appendIfMissing(ridGroup, rid, group)
 		}
 	}
 
