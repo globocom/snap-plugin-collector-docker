@@ -8,5 +8,4 @@ services:
       - PLUGIN_SRC=${PLUGIN_DEST}
     volumes:
       - ${PLUGIN_SRC}:${PLUGIN_DEST}
-      - /etc/resolv.conf:/etc/resolv.conf
     privileged: true
