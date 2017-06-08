@@ -41,7 +41,7 @@ var mockDockerID = "a26c852ce22c"
 var mockDockerHost = "root"
 
 var mockNamespace = "some_namespace"
-var mockPod = "some_pod"
+var mockPod = "some_pod_with_dot"
 var mockContainerName = "some_container_name"
 var mockContainerNameWithID = "some_container_name_a26c852ce22c"
 
@@ -65,7 +65,7 @@ var mockListOfContainers = map[string]*container.ContainerData{
 				"lkey2": "lval2",
 				"lkey3": "lval3",
 				"io.kubernetes.pod.namespace":  mockNamespace,
-				"io.kubernetes.pod.name":       mockPod,
+				"io.kubernetes.pod.name":       "some_pod.with_dot",
 				"io.kubernetes.container.name": mockContainerName,
 			},
 		},

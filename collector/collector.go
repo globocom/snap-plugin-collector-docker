@@ -704,10 +704,17 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 
 func getK8sLabelOrDefault(label string) string {
 	if len(label) > 0 {
-		return label
+		return strings.Map(dotToUnderscore, label)
 	}
 
 	return "none"
+}
+
+func dotToUnderscore(r rune) rune {
+	if r == '.' {
+		return '_'
+	}
+	return r
 }
 
 // GetMetricTypes returns list of available metrics
