@@ -319,6 +319,18 @@ func TestCollectMetrics(t *testing.T) {
 
 					testLabels(metrics)
 				})
+				Convey("for long docker_id", func() {
+					// specify docker id of requested metric type as a long
+					mockMt.Namespace[4].Value = mockListOfContainers[mockDockerID].ID
+
+					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
+					So(err, ShouldBeNil)
+					So(metrics, ShouldNotBeEmpty)
+					So(len(metrics), ShouldEqual, 1)
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
+
+					testLabels(metrics)
+				})
 				Convey("with labels", func() {
 					mockMt.Namespace[2].Value = mockNamespace
 					mockMt.Namespace[3].Value = mockPod
