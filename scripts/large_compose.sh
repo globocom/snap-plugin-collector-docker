@@ -57,4 +57,4 @@ echo "exit code from large_compose $test_res"
 _debug "stopping and removing containers"
 _docker_project docker-compose down
 
-exit 0
+exit $test_res
