@@ -307,7 +307,6 @@ func TestCollectMetrics(t *testing.T) {
 
 			Convey("succefull when specified container exists", func() {
 				Convey("for short docker_id", func() {
-					// specify namespace of requested metric type as a short
 					mockMt.Namespace[2].Value = mockNamespace
 					mockMt.Namespace[3].Value = mockPod
 					mockMt.Namespace[4].Value = mockContainerName
@@ -321,7 +320,6 @@ func TestCollectMetrics(t *testing.T) {
 					testLabels(metrics)
 				})
 				Convey("with labels", func() {
-					// specify namespace of requested metric type as a short
 					mockMt.Namespace[2].Value = mockNamespace
 					mockMt.Namespace[3].Value = mockPod
 					mockMt.Namespace[4].Value = mockContainerName
