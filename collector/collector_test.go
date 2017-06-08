@@ -44,6 +44,8 @@ var mockNamespace = "some_namespace"
 var mockPod = "some_pod"
 var mockContainerName = "some_container_name_" + mockDockerID
 
+var mockNonKubernetesDockerID = "b37d963df33d"
+
 var mockListOfContainers = map[string]*container.ContainerData{
 	mockDockerHost: {
 		ID:    "/",
@@ -64,6 +66,22 @@ var mockListOfContainers = map[string]*container.ContainerData{
 				"io.kubernetes.pod.namespace":  mockNamespace,
 				"io.kubernetes.pod.name":       mockPod,
 				"io.kubernetes.container.name": mockContainerName,
+			},
+		},
+		Stats: container.NewStatistics(),
+	},
+	mockNonKubernetesDockerID: {
+		ID: "b37d963df33dbf94f75299b879ccb0d94427aa265778e1e9d6e6483ffb7837ed",
+		Specification: container.Specification{
+			Image:      "my/image:latest",
+			Created:    time.Unix(1469187756, 0).Format("2006-01-02T15:04:05Z07:00"),
+			Status:     "Up 5 weeks",
+			SizeRw:     0,
+			SizeRootFs: 0,
+			Labels: map[string]string{
+				"lkey1": "lval1",
+				"lkey2": "lval2",
+				"lkey3": "lval3",
 			},
 		},
 		Stats: container.NewStatistics(),
@@ -341,6 +359,17 @@ func TestCollectMetrics(t *testing.T) {
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
 					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
+
+					testLabels(metrics)
+				})
+				Convey("with non kubernetes docker id", func() {
+					mockMt.Namespace[4].Value = mockNonKubernetesDockerID
+
+					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
+					So(err, ShouldBeNil)
+					So(metrics, ShouldNotBeEmpty)
+					So(len(metrics), ShouldEqual, 1)
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/none/none/"+mockNonKubernetesDockerID+"/stats/cgroups/memory_stats/cache")
 
 					testLabels(metrics)
 				})
