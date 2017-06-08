@@ -171,7 +171,7 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 			ns[2].Value = getK8sLabelOrDefault(namespace)
 			ns[3].Value = getK8sLabelOrDefault(pod)
 			if len(containerName) > 0 {
-				ns[4].Value = containerName
+				ns[4].Value = containerName + "_" + rid
 			} else {
 				ns[4].Value = rid
 			}

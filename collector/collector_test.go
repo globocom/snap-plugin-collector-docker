@@ -42,7 +42,8 @@ var mockDockerHost = "root"
 
 var mockNamespace = "some_namespace"
 var mockPod = "some_pod"
-var mockContainerName = "some_container_name_" + mockDockerID
+var mockContainerName = "some_container_name"
+var mockContainerNameWithID = "some_container_name_a26c852ce22c"
 
 var mockNonKubernetesDockerID = "b37d963df33d"
 
@@ -327,7 +328,7 @@ func TestCollectMetrics(t *testing.T) {
 				Convey("for short docker_id", func() {
 					mockMt.Namespace[2].Value = mockNamespace
 					mockMt.Namespace[3].Value = mockPod
-					mockMt.Namespace[4].Value = mockContainerName
+					mockMt.Namespace[4].Value = mockContainerNameWithID
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
@@ -345,20 +346,20 @@ func TestCollectMetrics(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerNameWithID+"/stats/cgroups/memory_stats/cache")
 
 					testLabels(metrics)
 				})
 				Convey("with labels", func() {
 					mockMt.Namespace[2].Value = mockNamespace
 					mockMt.Namespace[3].Value = mockPod
-					mockMt.Namespace[4].Value = mockContainerName
+					mockMt.Namespace[4].Value = mockContainerNameWithID
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerNameWithID+"/stats/cgroups/memory_stats/cache")
 
 					testLabels(metrics)
 				})
@@ -431,7 +432,7 @@ func TestCollectMetrics(t *testing.T) {
 			// specify pod/namespace/container and cpu_id of requested metric type
 			mockMt.Namespace[2].Value = mockNamespace
 			mockMt.Namespace[3].Value = mockPod
-			mockMt.Namespace[4].Value = mockContainerName
+			mockMt.Namespace[4].Value = mockContainerNameWithID
 
 			Convey("successful when specified cpu_id is valid", func() {
 				mockMt.Namespace[10].Value = "0"
@@ -485,7 +486,7 @@ func TestCollectMetrics(t *testing.T) {
 			// specify pod/namespace/container and network_interface of requested metric type
 			mockMt.Namespace[2].Value = mockNamespace
 			mockMt.Namespace[3].Value = mockPod
-			mockMt.Namespace[4].Value = mockContainerName
+			mockMt.Namespace[4].Value = mockContainerNameWithID
 
 			Convey("successful when specified network interface exists", func() {
 				mockMt.Namespace[7].Value = "eth0"
@@ -520,7 +521,7 @@ func TestCollectMetrics(t *testing.T) {
 			// specify pod/namespace/container and label_key of requested metric type
 			mockMt.Namespace[2].Value = mockNamespace
 			mockMt.Namespace[3].Value = mockPod
-			mockMt.Namespace[4].Value = mockContainerName
+			mockMt.Namespace[4].Value = mockContainerNameWithID
 
 			Convey("successful when specified label exists", func() {
 				mockMt.Namespace[7].Value = "lkey1"
