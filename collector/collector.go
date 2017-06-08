@@ -163,9 +163,11 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 		for rid := range ridGroup {
 			ns := make([]plugin.NamespaceElement, len(mt.Namespace))
 			copy(ns, mt.Namespace)
-			pod := c.containers[rid].Specification.Labels["io.kubernetes.pod.name"]
+
 			namespace := c.containers[rid].Specification.Labels["io.kubernetes.pod.namespace"]
+			pod := c.containers[rid].Specification.Labels["io.kubernetes.pod.name"]
 			containerName := c.containers[rid].Specification.Labels["io.kubernetes.container.name"]
+
 			ns[2].Value = getK8sLabelOrDefault(namespace)
 			ns[3].Value = getK8sLabelOrDefault(pod)
 			if len(containerName) > 0 {
@@ -679,14 +681,18 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 
 	// add labels as tags to metrics
 	for i := range metrics {
-		rid := metrics[i].Namespace[2].Value
+		rid := metrics[i].Namespace[4].Value
+		shortID, err := container.GetShortID(rid)
+		if err != nil {
+			return nil, err
+		}
 		// adding labels - only for docker's container, skip the host
-		if rid != "root" {
+		if shortID != "root" {
 			if len(metrics[i].Tags) == 0 {
-				metrics[i].Tags = c.containers[rid].Specification.Labels
+				metrics[i].Tags = c.containers[shortID].Specification.Labels
 			} else {
 				// adding labels one by one to existing tags
-				for lkey, lval := range c.containers[rid].Specification.Labels {
+				for lkey, lval := range c.containers[shortID].Specification.Labels {
 					metrics[i].Tags[lkey] = lval
 				}
 			}
@@ -792,7 +798,16 @@ func (c *collector) getRidGroup(mt ...plugin.Metric) (map[string]map[string]stru
 		case "root":
 			appendIfMissing(ridGroup, "root", group)
 		default:
-			appendIfMissing(ridGroup, rid, group)
+			shortID, err := container.GetShortID(rid)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, exist := c.containers[shortID]; !exist {
+				return nil, fmt.Errorf("Docker container %+s cannot be found", rid)
+			}
+
+			appendIfMissing(ridGroup, shortID, group)
 		}
 	}
 

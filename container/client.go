@@ -132,6 +132,11 @@ func GetShortID(dockerID string) (string, error) {
 		return dockerID, nil
 	}
 
+	components := strings.Split(dockerID, "_")
+	if len(components) > 1 {
+		dockerID = components[len(components)-1]
+	}
+
 	if len(dockerID) < 12 {
 		return "", fmt.Errorf("Docker id %v is too short (the length of id should equal at least 12)", dockerID)
 	}

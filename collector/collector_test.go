@@ -38,10 +38,11 @@ import (
 )
 
 var mockDockerID = "a26c852ce22c"
-var mockPod = "some_pod"
-var mockNamespace = "some_namespace"
-var mockContainerName = "some_container_name"
 var mockDockerHost = "root"
+
+var mockNamespace = "some_namespace"
+var mockPod = "some_pod"
+var mockContainerName = "some_container_name_" + mockDockerID
 
 var mockListOfContainers = map[string]*container.ContainerData{
 	mockDockerHost: {
@@ -60,6 +61,9 @@ var mockListOfContainers = map[string]*container.ContainerData{
 				"lkey1": "lval1",
 				"lkey2": "lval2",
 				"lkey3": "lval3",
+				"io.kubernetes.pod.namespace":  mockNamespace,
+				"io.kubernetes.pod.name":       mockPod,
+				"io.kubernetes.container.name": mockContainerName,
 			},
 		},
 		Stats: container.NewStatistics(),
@@ -304,8 +308,8 @@ func TestCollectMetrics(t *testing.T) {
 			Convey("succefull when specified container exists", func() {
 				Convey("for short docker_id", func() {
 					// specify namespace of requested metric type as a short
-					mockMt.Namespace[2].Value = mockPod
-					mockMt.Namespace[3].Value = mockNamespace
+					mockMt.Namespace[2].Value = mockNamespace
+					mockMt.Namespace[3].Value = mockPod
 					mockMt.Namespace[4].Value = mockContainerName
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
@@ -318,28 +322,26 @@ func TestCollectMetrics(t *testing.T) {
 				})
 				Convey("with labels", func() {
 					// specify namespace of requested metric type as a short
-					mockMt.Namespace[2].Value = mockPod
-					mockMt.Namespace[3].Value = mockNamespace
+					mockMt.Namespace[2].Value = mockNamespace
+					mockMt.Namespace[3].Value = mockPod
 					mockMt.Namespace[4].Value = mockContainerName
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockPod+"/"+mockNamespace+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/"+mockNamespace+"/"+mockPod+"/"+mockContainerName+"/stats/cgroups/memory_stats/cache")
 
 					testLabels(metrics)
 				})
 				Convey("for host of docker_id", func() {
-					mockMt.Namespace[2].Value = "none"
-					mockMt.Namespace[3].Value = "none"
-					mockMt.Namespace[4].Value = mockDockerID
+					mockMt.Namespace[4].Value = mockDockerHost
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldBeNil)
 					So(metrics, ShouldNotBeEmpty)
 					So(len(metrics), ShouldEqual, 1)
-					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/none/none/"+mockDockerID+"/stats/cgroups/memory_stats/cache")
+					So(strings.Join(metrics[0].Namespace.Strings(), "/"), ShouldEqual, "intel/docker/none/none/"+mockDockerHost+"/stats/cgroups/memory_stats/cache")
 
 					Convey("labels are empty", func() {
 						So(metrics[0].Tags, ShouldBeEmpty)
@@ -349,7 +351,7 @@ func TestCollectMetrics(t *testing.T) {
 			Convey("return an error when specified docker_id is invalid", func() {
 				Convey("when there is no such container", func() {
 					// specify id (12 chars) of docker container which not exist (it's not returned by ListContainerAsMap())
-					mockMt.Namespace[2].Value = "111111111111"
+					mockMt.Namespace[4].Value = "111111111111"
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldNotBeNil)
@@ -366,7 +368,7 @@ func TestCollectMetrics(t *testing.T) {
 						Config: metricConf,
 					}
 					// specify requested docker id in invalid way (shorter than 12 chars)
-					mockMt.Namespace[2].Value = "1"
+					mockMt.Namespace[4].Value = "1"
 
 					metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 					So(err, ShouldNotBeNil)
@@ -388,8 +390,8 @@ func TestCollectMetrics(t *testing.T) {
 				Config: metricConf,
 			}
 			// specify pod/namespace/container and cpu_id of requested metric type
-			mockMt.Namespace[2].Value = mockPod
-			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[2].Value = mockNamespace
+			mockMt.Namespace[3].Value = mockPod
 			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified cpu_id is valid", func() {
@@ -442,8 +444,8 @@ func TestCollectMetrics(t *testing.T) {
 				Config: metricConf,
 			}
 			// specify pod/namespace/container and network_interface of requested metric type
-			mockMt.Namespace[2].Value = mockPod
-			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[2].Value = mockNamespace
+			mockMt.Namespace[3].Value = mockPod
 			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified network interface exists", func() {
@@ -456,7 +458,7 @@ func TestCollectMetrics(t *testing.T) {
 				So(metrics[0].Namespace, ShouldResemble, mockMt.Namespace)
 			})
 			Convey("return an error when specified network interface is invalid", func() {
-				mockMt.Namespace[5].Value = "eth0_invalid"
+				mockMt.Namespace[7].Value = "eth0_invalid"
 
 				metrics, err := dockerPlg.CollectMetrics([]plugin.Metric{mockMt})
 				So(err, ShouldNotBeNil)
@@ -477,8 +479,8 @@ func TestCollectMetrics(t *testing.T) {
 				Config: metricConf,
 			}
 			// specify pod/namespace/container and label_key of requested metric type
-			mockMt.Namespace[2].Value = mockPod
-			mockMt.Namespace[3].Value = mockNamespace
+			mockMt.Namespace[2].Value = mockNamespace
+			mockMt.Namespace[3].Value = mockPod
 			mockMt.Namespace[4].Value = mockContainerName
 
 			Convey("successful when specified label exists", func() {
